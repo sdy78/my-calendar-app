@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PRESCRIPTEUR
+  REFERENT
+  BENEFICIAIRE
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  role        Role
+  calendars   Calendar[]
+
+  // User en tant que manager d’assignments
+  assignments Assignment[] @relation("ManagerAssignments")
+
+  // User en tant que bénéficiaire d’assignments
+  assignedTo  Assignment[] @relation("BeneficiaryAssignments")
+}
+
+model Assignment {
+  id            Int  @id @default(autoincrement())
+
+  managerId     Int
+  beneficiaryId Int
+
+  // Relation vers User en tant que manager
+  manager       User @relation("ManagerAssignments", fields: [managerId], references: [id])
+
+  // Relation vers User en tant que bénéficiaire
+  beneficiary   User @relation("BeneficiaryAssignments", fields: [beneficiaryId], references: [id])
+
+  role          Role
+}
+
+model Calendar {
+  id      Int    @id @default(autoincrement())
+  ownerId Int
+  owner   User   @relation(fields: [ownerId], references: [id])
+  events  Event[]
+}
+
+model Event {
+  id         Int      @id @default(autoincrement())
+  calendarId Int
+  calendar   Calendar @relation(fields: [calendarId], references: [id])
+  title      String
+  start      DateTime
+  end        DateTime?
+}
