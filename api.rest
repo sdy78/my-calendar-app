@@ -3,5 +3,6 @@ Content-Type: application/json
 
 {
     "email": "superman@test.com",
-    "role": "PRESCRIPTEUR"
+    "role": "REFERENT",
+    "name": "superman8"
 }
