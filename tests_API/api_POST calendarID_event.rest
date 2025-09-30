@@ -1,0 +1,8 @@
+POST http://localhost:3000/api/calendars/1/events HTTP/1.1
+Content-Type: application/json
+
+{
+  "title": "Rendez-vous médical",
+  "start": "2025-10-02T10:00:00.000Z",
+  "end": "2025-10-02T11:00:00.000Z"
+}

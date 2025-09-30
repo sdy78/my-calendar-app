@@ -6,12 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "prisma db seed"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.19",
     "@fullcalendar/interaction": "^6.1.19",
     "@fullcalendar/react": "^6.1.19",
+    "@fullcalendar/timegrid": "^6.1.19",
     "@kinde-oss/kinde-auth-nextjs": "^2.9.2",
     "@prisma/client": "^6.16.2",
     "daisyui": "^5.1.25",
@@ -29,6 +30,10 @@
     "prisma": "^6.16.2",
     "tailwindcss": "^4.1.13",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

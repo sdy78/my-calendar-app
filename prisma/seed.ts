@@ -1,67 +1,97 @@
-import pkg from '@prisma/client';
-const { PrismaClient } = pkg;
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Créer quelques utilisateurs de test
-  const prescripteur = await prisma.user.upsert({
-    where: { email: 'prescripteur@test.com' },
-    update: {},
-    create: {
-      email: 'prescripteur@test.com',
-      name: 'Prescripteur Test',
-      role: 'PRESCRIPTEUR', // adapte au type de ta colonne
-    },
+  console.log('Seeding database...');
+
+  // Nettoyage (attention en production !)
+  await prisma.assignment.deleteMany();
+  await prisma.event.deleteMany();
+  await prisma.calendar.deleteMany();
+  await prisma.user.deleteMany();
+
+  // Création de prescripteurs
+  await prisma.user.createMany({
+    data: [
+      { email: 'prescripteur1@test.com', name: 'Prescripteur 1', role: 'PRESCRIPTEUR' },
+      { email: 'prescripteur2@test.com', name: 'Prescripteur 2', role: 'PRESCRIPTEUR' }
+    ]
   });
 
-  const referent = await prisma.user.upsert({
-    where: { email: 'referent@test.com' },
-    update: {},
-    create: {
-      email: 'referent@test.com',
-      name: 'Référent Test',
-      role: 'REFERENT',
-    },
+  // Création de référents
+  await prisma.user.createMany({
+    data: [
+      { email: 'referent1@test.com', name: 'Référent 1', role: 'REFERENT' },
+      { email: 'referent2@test.com', name: 'Référent 2', role: 'REFERENT' }
+    ]
   });
 
-  const beneficiaire = await prisma.user.upsert({
-    where: { email: 'beneficiaire@test.com' },
-    update: {},
-    create: {
-      email: 'beneficiaire@test.com',
-      name: 'Bénéficiaire Test',
-      role: 'BENEFICIAIRE',
-    },
+  // Récupération des managers (prescripteurs + référents)
+  const allManagers = await prisma.user.findMany({
+    where: { role: { in: ['PRESCRIPTEUR', 'REFERENT'] } }
   });
 
-  // Créer un calendrier pour le bénéficiaire
-  const calendar = await prisma.calendar.create({
-    data: {
-      name: 'Calendrier du bénéficiaire',
-      ownerId: beneficiaire.id,
-    },
-  });
+  // Création des bénéficiaires, calendriers et événements
+  for (let i = 1; i <= 5; i++) {
+    // Génére le nom/prénom/email de façon unique
+    const day = (i + 1).toString().padStart(2, '0');
 
-  // Créer un événement test sur ce calendrier
-  await prisma.event.create({
-    data: {
-      title: 'Premier rendez-vous',
-      start: new Date(),
-      end: new Date(new Date().getTime() + 60 * 60 * 1000),
-      calendarId: calendar.id,
-    },
-  });
+    // Génère des dates ISO valides
+    const startMedical = new Date(`2025-10-${day}T09:00:00Z`);
+    const endMedical = new Date(`2025-10-${day}T10:00:00Z`);
+    const startAtelier = new Date(`2025-10-${day}T14:00:00Z`);
+    const endAtelier = new Date(`2025-10-${day}T16:00:00Z`);
 
-  console.log('Seed terminé : ✅');
+    const beneficiaire = await prisma.user.create({
+      data: {
+        email: `beneficiaire${i}@test.com`,
+        name: `Bénéficiaire ${i}`,
+        role: 'BENEFICIAIRE',
+        calendars: {
+          create: {
+            events: {
+              create: [
+                {
+                  title: 'Rendez-vous médical',
+                  start: startMedical,
+                  end: endMedical
+                },
+                {
+                  title: 'Atelier formation',
+                  start: startAtelier,
+                  end: endAtelier
+                }
+              ]
+            }
+          }
+        }
+      },
+      include: { calendars: true }
+    });
+
+    // Attribution d'un manager au hasard
+    const randomManager = allManagers[Math.floor(Math.random() * allManagers.length)];
+
+    await prisma.assignment.create({
+      data: {
+        managerId: randomManager.id,
+        beneficiaryId: beneficiaire.id,
+        role: randomManager.role
+      }
+    });
+
+    console.log(`Bénéficiaire ${beneficiaire.email} assigné à ${randomManager.role}`);
+  }
+
+  console.log('Seeding terminé.');
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
