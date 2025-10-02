@@ -10,7 +10,7 @@ export async function GET(
     const { userId } = await context.params;
     const userIdInt = parseInt(userId, 10);
 
-    //console.log("Récupération des événements pour userId:", userIdInt);
+    console.log("Récupération des événements pour userId:", userIdInt);
 
     // Récupérer le calendrier de l'utilisateur
     const calendar = await prisma.calendar.findFirst({
@@ -23,7 +23,7 @@ export async function GET(
     });
 
     if (!calendar) {
-     // console.log("Aucun calendrier trouvé, création d'un nouveau");
+      console.log("Aucun calendrier trouvé, création d'un nouveau");
       // Si le calendrier n'existe pas, on peut le créer automatiquement
       const newCalendar = await prisma.calendar.create({
         data: {
@@ -34,7 +34,7 @@ export async function GET(
       return NextResponse.json(newCalendar.events, { status: 200 });
     }
 
-   // console.log(`${calendar.events.length} événements trouvés`);
+    console.log(`${calendar.events.length} événements trouvés`);
     return NextResponse.json(calendar.events, { status: 200 });
   } catch (err) {
     console.error("Erreur lors de la récupération des événements:", err);
@@ -55,9 +55,9 @@ export async function POST(
     const userIdInt = parseInt(userId, 10);
 
     const body = await req.json();
-    const { title, start, end } = body;
+    const { title, description, start, end } = body;
 
-    console.log("Création d'événement:", { userId: userIdInt, title, start, end });
+    console.log("Création d'événement:", { userId: userIdInt, title, description, start, end });
 
     if (!title || !start) {
       return NextResponse.json(
@@ -82,6 +82,7 @@ export async function POST(
     const newEvent = await prisma.event.create({
       data: {
         title,
+        description: description || null,
         start: new Date(start),
         end: end ? new Date(end) : new Date(start),
         calendarId: calendar.id,

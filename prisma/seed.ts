@@ -1,3 +1,4 @@
+// prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -34,7 +35,6 @@ async function main() {
 
   // Création des bénéficiaires, calendriers et événements
   for (let i = 1; i <= 5; i++) {
-    // Génére le nom/prénom/email de façon unique
     const day = (i + 1).toString().padStart(2, '0');
 
     // Génère des dates ISO valides
@@ -54,11 +54,13 @@ async function main() {
               create: [
                 {
                   title: 'Rendez-vous médical',
+                  description: 'Consultation générale avec le Dr. Martin',
                   start: startMedical,
                   end: endMedical
                 },
                 {
                   title: 'Atelier formation',
+                  description: 'Atelier bureautique - Excel niveau débutant',
                   start: startAtelier,
                   end: endAtelier
                 }

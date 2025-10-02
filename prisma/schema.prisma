@@ -53,10 +53,11 @@ model Calendar {
 }
 
 model Event {
-  id         Int      @id @default(autoincrement())
-  calendarId Int
-  calendar   Calendar @relation(fields: [calendarId], references: [id])
-  title      String
-  start      DateTime
-  end        DateTime?
+  id          Int      @id @default(autoincrement())
+  calendarId  Int
+  calendar    Calendar @relation(fields: [calendarId], references: [id])
+  title       String
+  description String?
+  start       DateTime
+  end         DateTime?
 }

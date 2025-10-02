@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "db:reset": "tsx prisma/reset.ts"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.19",
