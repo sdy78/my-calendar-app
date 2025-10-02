@@ -1,10 +1,11 @@
-// src/components/calendar.view.tsx
+// src/components/normal-calendar.tsx
 "use client";
 
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { useState, useEffect } from "react";
 
 interface EventData {
   id: number;
@@ -14,33 +15,150 @@ interface EventData {
   end?: string;
 }
 
-interface CalendarViewProps {
-  events: any[];
-  loading: boolean;
-  modalOpen: boolean;
-  currentEvent: EventData | null;
-  isEditing: boolean;
-  onDateClick: (info: any) => void;
-  onEventClick: (info: any) => void;
-  onSave: () => void;
-  onDelete: () => void;
-  onCloseModal: () => void;
-  onEventChange: (event: EventData) => void;
+interface NormalCalendarProps {
+  userId: number;
 }
 
-export default function CalendarView({
-  events,
-  loading,
-  modalOpen,
-  currentEvent,
-  isEditing,
-  onDateClick,
-  onEventClick,
-  onSave,
-  onDelete,
-  onCloseModal,
-  onEventChange,
-}: CalendarViewProps) {
+export default function NormalCalendar({ userId }: NormalCalendarProps) {
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [currentEvent, setCurrentEvent] = useState<EventData | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Charger les événements depuis l'API
+  useEffect(() => {
+    loadEvents();
+  }, [userId]);
+
+  const loadEvents = () => {
+    setLoading(true);
+    fetch(`/api/calendars/${userId}/events`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Erreur de chargement");
+        return res.json();
+      })
+      .then((data) => {
+        const formattedEvents = data.map((event: any) => ({
+          id: event.id,
+          title: event.title,
+          start: event.start,
+          end: event.end,
+          extendedProps: {
+            description: event.description,
+          },
+        }));
+        setEvents(formattedEvents);
+      })
+      .catch((err) => {
+        console.error("Erreur lors du chargement des événements:", err);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  // Ouvrir le modal pour créer un événement
+  const handleDateClick = (info: any) => {
+    setCurrentEvent({
+      id: 0,
+      title: "",
+      description: "",
+      start: info.dateStr,
+      end: info.dateStr,
+    });
+    setIsEditing(false);
+    setModalOpen(true);
+  };
+
+  // Ouvrir le modal pour éditer un événement
+  const handleEventClick = (info: any) => {
+    const event = info.event;
+    setCurrentEvent({
+      id: parseInt(event.id),
+      title: event.title,
+      description: event.extendedProps.description || "",
+      start: formatForInput(event.startStr),
+      end: formatForInput(event.endStr || event.startStr)
+    });
+    setIsEditing(true);
+    setModalOpen(true);
+  };
+
+  // Sauvegarder (créer ou modifier)
+  const handleSave = async () => {
+    if (!currentEvent?.title) {
+      alert("Le titre est requis");
+      return;
+    }
+
+    try {
+      if (isEditing) {
+        const res = await fetch(`/api/events/${currentEvent.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: currentEvent.title,
+            description: currentEvent.description,
+            start: currentEvent.start,
+            end: currentEvent.end,
+          }),
+        });
+
+        if (res.ok) {
+          loadEvents();
+          setModalOpen(false);
+        } else {
+          alert("Erreur lors de la modification");
+        }
+      } else {
+        const res = await fetch(`/api/calendars/${userId}/events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: currentEvent.title,
+            description: currentEvent.description,
+            start: currentEvent.start,
+            end: currentEvent.end,
+          }),
+        });
+
+        if (res.ok) {
+          loadEvents();
+          setModalOpen(false);
+        } else {
+          alert("Erreur lors de la création");
+        }
+      }
+    } catch (err) {
+      console.error("Erreur:", err);
+      alert("Erreur lors de la sauvegarde");
+    }
+  };
+
+  // Supprimer un événement
+  const handleDelete = async () => {
+    if (!currentEvent?.id || !confirm("Supprimer cet événement ?")) return;
+
+    try {
+      const res = await fetch(`/api/events/${currentEvent.id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        loadEvents();
+        setModalOpen(false);
+      } else {
+        alert("Erreur lors de la suppression");
+      }
+    } catch (err) {
+      console.error("Erreur:", err);
+      alert("Erreur lors de la suppression");
+    }
+  };
+
+  // Formater pour input datetime-local
+  const formatForInput = (date: Date | null) =>
+    date ? new Date(date).toISOString().slice(0, 16) : "";
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -58,8 +176,8 @@ export default function CalendarView({
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         events={events}
-        dateClick={onDateClick}
-        eventClick={onEventClick}
+        dateClick={handleDateClick}
+        eventClick={handleEventClick}
         editable={true}
         headerToolbar={{
           left: "prev,next today",
@@ -109,7 +227,7 @@ export default function CalendarView({
                   placeholder="Titre de l'événement"
                   value={currentEvent?.title || ""}
                   onChange={(e) =>
-                    onEventChange({ ...currentEvent!, title: e.target.value })
+                    setCurrentEvent({ ...currentEvent!, title: e.target.value })
                   }
                 />
               </div>
@@ -124,7 +242,7 @@ export default function CalendarView({
                   placeholder="Description de l'événement (optionnel)"
                   value={currentEvent?.description || ""}
                   onChange={(e) =>
-                    onEventChange({
+                    setCurrentEvent({
                       ...currentEvent!,
                       description: e.target.value,
                     })
@@ -143,7 +261,7 @@ export default function CalendarView({
                     className="input input-bordered input-sm w-full focus:input-primary"
                     value={currentEvent?.start || ""}
                     onChange={(e) =>
-                      onEventChange({ ...currentEvent!, start: e.target.value })
+                      setCurrentEvent({ ...currentEvent!, start: e.target.value })
                     }
                   />
                 </div>
@@ -157,7 +275,7 @@ export default function CalendarView({
                     className="input input-bordered input-sm w-full focus:input-primary"
                     value={currentEvent?.end || ""}
                     onChange={(e) =>
-                      onEventChange({ ...currentEvent!, end: e.target.value })
+                      setCurrentEvent({ ...currentEvent!, end: e.target.value })
                     }
                   />
                 </div>
@@ -171,7 +289,7 @@ export default function CalendarView({
                   {isEditing && (
                     <button 
                       className="btn btn-error btn-outline btn-sm flex-1"
-                      onClick={onDelete}
+                      onClick={handleDelete}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -183,13 +301,13 @@ export default function CalendarView({
                 <div className="flex gap-2 order-1 sm:order-2 ml-auto">
                   <button 
                     className="btn btn-outline btn-sm"
-                    onClick={onCloseModal}
+                    onClick={() => setModalOpen(false)}
                   >
                     Annuler
                   </button>
                   <button 
                     className="btn btn-primary btn-sm"
-                    onClick={onSave}
+                    onClick={handleSave}
                   >
                     {isEditing ? "Modifier" : "Créer"}
                   </button>
@@ -199,7 +317,7 @@ export default function CalendarView({
           </div>
 
           {/* Fermer en cliquant à l'extérieur */}
-          <div className="modal-backdrop" onClick={onCloseModal}>
+          <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
             <button>close</button>
           </div>
         </div>
