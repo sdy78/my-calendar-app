@@ -15,7 +15,7 @@ async function main() {
   // Création de prescripteurs
   await prisma.user.createMany({
     data: [
-      { email: 'prescripteur1@test.com', name: 'Prescripteur 1', role: 'PRESCRIPTEUR' },
+      { email: 'stebou8mendy@gmail.com', name: 'stébou', role: 'PRESCRIPTEUR' },
       { email: 'prescripteur2@test.com', name: 'Prescripteur 2', role: 'PRESCRIPTEUR' }
     ]
   });

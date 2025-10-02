@@ -1,11 +1,8 @@
-// src/components/CalendarView.tsx
+// src/components/calendar.container.tsx
 "use client";
 
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
 import { useState, useEffect } from "react";
+import CalendarView from "./calendar.view";
 
 interface EventData {
   id: number;
@@ -15,7 +12,11 @@ interface EventData {
   end?: string;
 }
 
-export default function CalendarView({ userId }: { userId: number }) {
+interface CalendarContainerProps {
+  userId: number;
+}
+
+export default function CalendarContainer({ userId }: CalendarContainerProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,8 +69,6 @@ export default function CalendarView({ userId }: { userId: number }) {
   // Ouvrir le modal pour éditer un événement
   const handleEventClick = (info: any) => {
     const event = info.event;
-    console.log("event startSt", event.startStr);
-    console.log("event endStr", event.endStr);
     setCurrentEvent({
       id: parseInt(event.id),
       title: event.title,
@@ -90,7 +89,6 @@ export default function CalendarView({ userId }: { userId: number }) {
 
     try {
       if (isEditing) {
-        // Mise à jour
         const res = await fetch(`/api/events/${currentEvent.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -109,7 +107,6 @@ export default function CalendarView({ userId }: { userId: number }) {
           alert("Erreur lors de la modification");
         }
       } else {
-        // Création
         const res = await fetch(`/api/calendars/${userId}/events`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -159,111 +156,20 @@ export default function CalendarView({ userId }: { userId: number }) {
   const formatForInput = (date: Date | null) =>
     date ? new Date(date).toISOString().slice(0, 16) : "";
 
-  if (loading) {
-    return <div className="p-4">Chargement du calendrier...</div>;
-  }
+  // Props à passer à la vue
+  const viewProps = {
+    events,
+    loading,
+    modalOpen,
+    currentEvent,
+    isEditing,
+    onDateClick: handleDateClick,
+    onEventClick: handleEventClick,
+    onSave: handleSave,
+    onDelete: handleDelete,
+    onCloseModal: () => setModalOpen(false),
+    onEventChange: setCurrentEvent,
+  };
 
-  return (
-    <div className="p-4">
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="dayGridMonth"
-        events={events}
-        dateClick={handleDateClick}
-        eventClick={handleEventClick}
-        editable={true}
-        headerToolbar={{
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
-        }}
-        locale="fr"
-      />
-
-      {/* Modal DaisyUI */}
-      {modalOpen && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">
-              {isEditing ? "Modifier l'événement" : "Nouvel événement"}
-            </h3>
-
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text">Titre *</span>
-              </label>
-              <input
-                type="text"
-                className="input input-bordered"
-                value={currentEvent?.title || ""}
-                onChange={(e) =>
-                  setCurrentEvent({ ...currentEvent!, title: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text">Description</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered h-24"
-                value={currentEvent?.description || ""}
-                onChange={(e) =>
-                  setCurrentEvent({
-                    ...currentEvent!,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Début</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  className="input input-bordered"
-                  value={currentEvent?.start || ""}
-                  onChange={(e) =>
-                    setCurrentEvent({ ...currentEvent!, start: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Fin</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  className="input input-bordered"
-                  value={currentEvent?.end || ""}
-                  onChange={(e) =>
-                    setCurrentEvent({ ...currentEvent!, end: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="modal-action">
-              {isEditing && (
-                <button className="btn btn-error" onClick={handleDelete}>
-                  Supprimer
-                </button>
-              )}
-              <button className="btn" onClick={() => setModalOpen(false)}>
-                Annuler
-              </button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                {isEditing ? "Modifier" : "Créer"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <CalendarView {...viewProps} />;
 }
